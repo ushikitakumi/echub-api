@@ -1,6 +1,8 @@
-from django.shortcuts import render
 import requests
+import time
 from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -10,17 +12,31 @@ def scrape_products(request):
     keyword = request.GET.get('keyword')
 
     # スクレイピング対象のECサイトのURL
-    # url = f'https://example.com/products?keyword={keyword}'
-    url = f'https://www.mercari.com/jp/search/?keyword={keyword}'
+    url = "https://jp.mercari.com/search?keyword=" + keyword
 
     # スクレイピング
-    res = requests.get(url)
-    soup = BeautifulSoup(res.text, 'html.parser')
+    options = Options()
+    options.add_argument('--headless')
+    browser = webdriver.Chrome(options=options)
+    browser.set_window_size('1200', '1000')
+    browser.get(url)
+    time.sleep(1)
+    html = browser.page_source.encode("utf-8")
+
+    soup = BeautifulSoup(html, "html.parser")
+    items_list = soup.find_all("li", attrs={"data-testid":"item-cell"})
+
     products = []
-    for product_elem in soup.select('.product'):
-        name = product_elem.select_one('.product-name').text.strip()
-        price = product_elem.select_one('.product-price').text.strip()
-        products.append({'name': name, 'price': price})
+    for item in items_list:
+        a_tag = item.find("a")
+        thumbnail_tag = item.find("mer-item-thumbnail")
+
+        url = "https://jp.mercari.com" + a_tag["href"]
+        name = thumbnail_tag["item-name"]
+        price = thumbnail_tag["price"]
+        image = thumbnail_tag["src"]
+
+        products.append({"url":url, "name":name, "price":price, "image":image})
 
     # 商品情報をJSON形式で返す
     return Response(products)
