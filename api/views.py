@@ -7,10 +7,10 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 @api_view(['GET'])
-def scrape_products(request):
+def scrape_products(request, keyword):
     # ユーザーからキーワードを取得
     # keyword = request.GET.get('keyword')
-    keyword = "fender"
+    # keyword = "fender"
 
     # スクレイピング対象のECサイトのURL
     url = "https://jp.mercari.com/search?keyword=" + keyword
