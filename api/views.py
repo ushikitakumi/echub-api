@@ -13,7 +13,7 @@ def scrape_products(request, keyword):
     # keyword = "fender"
 
     # スクレイピング対象のECサイトのURL
-    url = "https://jp.mercari.com/search?keyword=" + keyword
+    url = f"https://jp.mercari.com/search?keyword={keyword}&status=on_sale"
 
     # スクレイピング
     options = Options()
