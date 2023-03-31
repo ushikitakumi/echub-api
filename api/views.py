@@ -7,29 +7,33 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from concurrent.futures import ThreadPoolExecutor
 
 @api_view(['GET'])
 def scrape_products(request, keyword):
 
-    # スクレイピング
-    options = Options()
-    options.add_argument('--headless')
-    driver = webdriver.Chrome(options=options)
-    driver.set_window_size('1200', '1000')
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        future_Rakuma = executor.submit(scrapeRakuma,keyword)
+        future_Merucari = executor.submit(scrapeMerucari,keyword)
+        future_Yahoo = executor.submit(scrapeYahoo,keyword)
+        future_PayPayFleamarket = executor.submit(scrapePayPayFleamarket,keyword)
 
-    json_Merucari = scrapeMerucari(keyword, driver)
-    json_Yahoo = scrapeYahoo(keyword, driver)
-    json_PayPayFleamarket = scrapePayPayFleamarket(keyword, driver)
-    json_Rakuma = scrapeRakuma(keyword, driver)
+    json_Merucari = future_Merucari.result()
+    json_Yahoo = future_Yahoo.result()
+    json_PayPayFleamarket = future_PayPayFleamarket.result()
+    json_Rakuma = future_Rakuma.result()
     json = json_Merucari + json_Yahoo + json_PayPayFleamarket + json_Rakuma
-
-    driver.quit()
 
     # 商品情報をJSON形式で返す
     return Response(json)
 
 
-def scrapeMerucari(keyword, driver):
+def scrapeMerucari(keyword):
+
+    options = Options()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(options=options)
+    driver.set_window_size('1200', '1000')
 
     url = f"https://jp.mercari.com/search?keyword={keyword}&status=on_sale"
     driver.get(url)
@@ -56,10 +60,16 @@ def scrapeMerucari(keyword, driver):
 
         products.append({"url": url, "name": name, "price": price, "image": image})
 
+    driver.quit()
+
     return products
 
+def scrapeYahoo(keyword):
 
-def scrapeYahoo(keyword, driver):
+    options = Options()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(options=options)
+    driver.set_window_size('1200', '1000')
 
     url = f"https://auctions.yahoo.co.jp/search/search?auccat=&tab_ex=commerce&ei=utf-8&aq=-1&oq=&sc_i=&exflg=1&p={keyword}&x=0&y=0"
     driver.get(url)
@@ -76,7 +86,7 @@ def scrapeYahoo(keyword, driver):
 
     products = []
     for item in items_list:
-
+        
         product_tag = item.find("a")
 
         url = product_tag["href"]
@@ -85,10 +95,18 @@ def scrapeYahoo(keyword, driver):
         image = product_tag["data-auction-img"]
 
         products.append({"url": url, "name": name, "price": price, "image": image})
+    
+    driver.quit()
 
     return products
 
-def scrapePayPayFleamarket(keyword,driver):
+def scrapePayPayFleamarket(keyword):
+
+    options = Options()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(options=options)
+    driver.set_window_size('1200', '1000')
+
     url = f"https://paypayfleamarket.yahoo.co.jp/search/{keyword}?open=1"
     driver.get(url)
 
@@ -114,9 +132,16 @@ def scrapePayPayFleamarket(keyword,driver):
 
         products.append({"url": url, "name": name, "price": price, "image": image})
 
+    driver.quit()
+
     return products
 
-def scrapeRakuma(keyword, driver):
+def scrapeRakuma(keyword):
+
+    options = Options()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(options=options)
+    driver.set_window_size('1200', '1000')
 
     url = f"https://fril.jp/s?query={keyword}&transaction=selling"
     driver.get(url)
@@ -143,5 +168,7 @@ def scrapeRakuma(keyword, driver):
         image = img_tag["src"]
 
         products.append({"url": url, "name": name, "price": price, "image": image})
+
+    driver.quit()
 
     return products
