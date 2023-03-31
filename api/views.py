@@ -3,6 +3,9 @@ import time
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By  # 追加
+from selenium.webdriver.support.ui import WebDriverWait  # 追加
+from selenium.webdriver.support import expected_conditions as EC  # 追加
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -18,11 +21,13 @@ def scrape_products(request, keyword):
     # スクレイピング
     options = Options()
     options.add_argument('--headless')
-    browser = webdriver.Chrome(options=options)
-    browser.set_window_size('1200', '1000')
-    browser.get(url)
-    time.sleep(1)
-    html = browser.page_source.encode("utf-8")
+    driver = webdriver.Chrome(options=options)
+    driver.set_window_size('1200', '1000')
+    driver.get(url)
+    # time.sleep(1)
+    wait = WebDriverWait(driver, 10)  # 10秒のタイムアウト
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'li[data-testid="item-cell"]')))
+    html = driver.page_source.encode("utf-8")
 
     soup = BeautifulSoup(html, "html.parser")
     items_list = soup.find_all("li", attrs={"data-testid":"item-cell"})
@@ -38,6 +43,8 @@ def scrape_products(request, keyword):
         image = thumbnail_tag["src"]
 
         products.append({"url":url, "name":name, "price":price, "image":image})
+
+    driver.quit()
 
     # 商品情報をJSON形式で返す
     return Response(products)
