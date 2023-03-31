@@ -1,36 +1,48 @@
 import requests
-import time
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By  # 追加
-from selenium.webdriver.support.ui import WebDriverWait  # 追加
-from selenium.webdriver.support import expected_conditions as EC  # 追加
+from selenium.webdriver.common.by import By 
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 @api_view(['GET'])
 def scrape_products(request, keyword):
-    # ユーザーからキーワードを取得
-    # keyword = request.GET.get('keyword')
-    # keyword = "fender"
-
-    # スクレイピング対象のECサイトのURL
-    url = f"https://jp.mercari.com/search?keyword={keyword}&status=on_sale"
 
     # スクレイピング
     options = Options()
     options.add_argument('--headless')
     driver = webdriver.Chrome(options=options)
     driver.set_window_size('1200', '1000')
+
+    json_Merucari = scrapeMerucari(keyword, driver)
+    json_Yahoo = scrapeYahoo(keyword, driver)
+    json_PayPayFleamarket = scrapePayPayFleamarket(keyword, driver)
+    json_Rakuma = scrapeRakuma(keyword, driver)
+    json = json_Merucari + json_Yahoo + json_PayPayFleamarket + json_Rakuma
+
+    driver.quit()
+
+    # 商品情報をJSON形式で返す
+    return Response(json)
+
+
+def scrapeMerucari(keyword, driver):
+
+    url = f"https://jp.mercari.com/search?keyword={keyword}&status=on_sale"
     driver.get(url)
-    # time.sleep(1)
+
+    # ページがロードされるまで待機
     wait = WebDriverWait(driver, 10)  # 10秒のタイムアウト
     wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'li[data-testid="item-cell"]')))
+
     html = driver.page_source.encode("utf-8")
 
+    # Beautifulsoupで要素取得
     soup = BeautifulSoup(html, "html.parser")
-    items_list = soup.find_all("li", attrs={"data-testid":"item-cell"})
+    items_list = soup.find_all("li", attrs={"data-testid": "item-cell"})
 
     products = []
     for item in items_list:
@@ -42,9 +54,94 @@ def scrape_products(request, keyword):
         price = thumbnail_tag["price"]
         image = thumbnail_tag["src"]
 
-        products.append({"url":url, "name":name, "price":price, "image":image})
+        products.append({"url": url, "name": name, "price": price, "image": image})
 
-    driver.quit()
+    return products
 
-    # 商品情報をJSON形式で返す
-    return Response(products)
+
+def scrapeYahoo(keyword, driver):
+
+    url = f"https://auctions.yahoo.co.jp/search/search?auccat=&tab_ex=commerce&ei=utf-8&aq=-1&oq=&sc_i=&exflg=1&p={keyword}&x=0&y=0"
+    driver.get(url)
+
+    # # ページがロードされるまで待機
+    wait = WebDriverWait(driver, 10)  # 10秒のタイムアウト
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'li[class="Product"]')))
+
+    html = driver.page_source.encode("utf-8")
+
+    # Beautifulsoupで要素取得
+    soup = BeautifulSoup(html, "html.parser")
+    items_list = soup.find_all("li", attrs={"class": "Product"})
+
+    products = []
+    for item in items_list:
+
+        product_tag = item.find("a")
+
+        url = product_tag["href"]
+        name = product_tag["data-auction-title"]
+        price = product_tag["data-auction-price"]
+        image = product_tag["data-auction-img"]
+
+        products.append({"url": url, "name": name, "price": price, "image": image})
+
+    return products
+
+def scrapePayPayFleamarket(keyword,driver):
+    url = f"https://paypayfleamarket.yahoo.co.jp/search/{keyword}?open=1"
+    driver.get(url)
+
+    # ページがロードされるまで待機
+    wait = WebDriverWait(driver, 10)  # 10秒のタイムアウト
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'a[class="sc-6dae2d2e-0 jRXEcC"]')))
+
+    html = driver.page_source.encode("utf-8")
+
+    # Beautifulsoupで要素取得
+    soup = BeautifulSoup(html, "html.parser")
+    items_list = soup.find_all("a", attrs={"class": "sc-6dae2d2e-0 jRXEcC"})
+
+    products = []
+    for item in items_list:
+        img_tag = item.find("img", attrs={"loading": "lazy"})
+        price_tag = item.find("p")
+
+        url = item["href"]
+        name = img_tag["alt"]
+        price = price_tag.text
+        image = img_tag["src"]
+
+        products.append({"url": url, "name": name, "price": price, "image": image})
+
+    return products
+
+def scrapeRakuma(keyword, driver):
+
+    url = f"https://fril.jp/s?query={keyword}&transaction=selling"
+    driver.get(url)
+
+    # ページがロードされるまで待機
+    wait = WebDriverWait(driver, 10)  # 10秒のタイムアウト
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[class="item"]')))
+
+    html = driver.page_source.encode("utf-8")
+
+    # Beautifulsoupで要素取得
+    soup = BeautifulSoup(html, "html.parser")
+    items_list = soup.find_all("div", attrs={"class": "item-box"})
+
+    products = []
+    for item in items_list:
+        a_tag = item.find("a", attrs={"class": "link_search_image"})
+        img_tag = item.find("img", attrs={"class": "img-responsive lazy"})
+        price_tag = item.find("span", attrs={"itemprop": "price"})
+
+        url = a_tag["href"]
+        name = img_tag["alt"]
+        price = price_tag.text
+        image = img_tag["src"]
+
+        products.append({"url": url, "name": name, "price": price, "image": image})
+
+    return products
