@@ -1,4 +1,3 @@
-import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -45,7 +44,7 @@ def scrapeMerucari(keyword):
     html = driver.page_source.encode("utf-8")
 
     # Beautifulsoupで要素取得
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
     items_list = soup.find_all("li", attrs={"data-testid": "item-cell"})
 
     products = []
@@ -81,7 +80,7 @@ def scrapeYahoo(keyword):
     html = driver.page_source.encode("utf-8")
 
     # Beautifulsoupで要素取得
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
     items_list = soup.find_all("li", attrs={"class": "Product"})
 
     products = []
@@ -117,7 +116,7 @@ def scrapePayPayFleamarket(keyword):
     html = driver.page_source.encode("utf-8")
 
     # Beautifulsoupで要素取得
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
     items_list = soup.find_all("a", attrs={"class": "sc-6dae2d2e-0 jRXEcC"})
 
     products = []
@@ -153,7 +152,7 @@ def scrapeRakuma(keyword):
     html = driver.page_source.encode("utf-8")
 
     # Beautifulsoupで要素取得
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
     items_list = soup.find_all("div", attrs={"class": "item-box"})
 
     products = []
