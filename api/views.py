@@ -164,7 +164,7 @@ def scrapeRakuma(keyword):
         url = a_tag["href"]
         name = img_tag["alt"]
         price = price_tag.text
-        image = img_tag["src"]
+        image = img_tag["data-original"]
 
         products.append({"url": url, "name": name, "price": price, "image": image})
 
