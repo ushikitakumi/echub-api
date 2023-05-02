@@ -12,7 +12,6 @@ from concurrent.futures import ThreadPoolExecutor
 def scrape_products(request, keyword):
 
     with ThreadPoolExecutor(max_workers=4) as executor:
-        future_Rakuma = executor.submit(scrapeRakuma,keyword)
         future_Merucari = executor.submit(scrapeMerucari,keyword)
         future_Yahoo = executor.submit(scrapeYahoo,keyword)
         future_PayPayFleamarket = executor.submit(scrapePayPayFleamarket,keyword)
@@ -20,8 +19,7 @@ def scrape_products(request, keyword):
     json_Merucari = future_Merucari.result()
     json_Yahoo = future_Yahoo.result()
     json_PayPayFleamarket = future_PayPayFleamarket.result()
-    json_Rakuma = future_Rakuma.result()
-    json = json_Merucari + json_Yahoo + json_PayPayFleamarket + json_Rakuma
+    json = json_Merucari + json_Yahoo + json_PayPayFleamarket
 
     # 商品情報をJSON形式で返す
     return Response(json)
@@ -128,43 +126,6 @@ def scrapePayPayFleamarket(keyword):
         name = img_tag["alt"]
         price = price_tag.text
         image = img_tag["src"]
-
-        products.append({"url": url, "name": name, "price": price, "image": image})
-
-    driver.quit()
-
-    return products
-
-def scrapeRakuma(keyword):
-
-    options = Options()
-    options.add_argument('--headless')
-    driver = webdriver.Chrome(options=options)
-    driver.set_window_size('1200', '1000')
-
-    url = f"https://fril.jp/s?query={keyword}&transaction=selling"
-    driver.get(url)
-
-    # ページがロードされるまで待機
-    wait = WebDriverWait(driver, 10)  # 10秒のタイムアウト
-    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[class="item"]')))
-
-    html = driver.page_source.encode("utf-8")
-
-    # Beautifulsoupで要素取得
-    soup = BeautifulSoup(html, "lxml")
-    items_list = soup.find_all("div", attrs={"class": "item-box"})
-
-    products = []
-    for item in items_list:
-        a_tag = item.find("a", attrs={"class": "link_search_image"})
-        img_tag = item.find("img", attrs={"class": "img-responsive lazy"})
-        price_tag = item.find("span", attrs={"itemprop": "price"})
-
-        url = a_tag["href"]
-        name = img_tag["alt"]
-        price = price_tag.text
-        image = img_tag["data-original"]
 
         products.append({"url": url, "name": name, "price": price, "image": image})
 
